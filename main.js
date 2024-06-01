@@ -8,11 +8,11 @@ const numPoints = 40;
 //// frame rate time step
 const dt = 0.025;
 //// focus y position
-let fy;
+let fy = 0;
 //// parabola width
 let D = 1;
 //// parabola height
-let h;
+let h = 1;
 //// positioning button
 let positioningButton;
 //// flag mouse mic positioning
@@ -39,13 +39,15 @@ let responseChart;
 let speedOfSound = 340;
 //// parabola size & position
 let parabolaGraph = {
-  width: 200, 
-  height: 200,
+  width: 225, 
+  height: 225,
   position: {
     x: 50,
     y: 350
   }
 };
+//// flag Air temperature
+let  flagAirTemperature = 0;
 
 let Fp = [];
 let tempData = [];
@@ -65,6 +67,7 @@ const gamma = 1.4;
 function setup() {
   createCanvas(windowWidth, windowHeight);
   frameRate(12);
+  // pixelDensity(1);
 
   textFont(mainFont);
   Chart.defaults.global.defaultFontFamily = mainFont;
@@ -83,7 +86,6 @@ function setup() {
   }
   createMicChart();
   updateMicChart(0.25*D,D);
-
   createReferenceLinks();
   
 }
@@ -106,7 +108,10 @@ function exportCSVTable(){
 function draw() {
   background(255);
   
-  airTemperature = temperatureSlider.value();
+  if(flagAirTemperature){
+    airTemperature = temperatureSlider.value();
+  }
+  
   D = parabolaWidthSlider.value();
   h = parabolaHeightSlider.value();
   
@@ -118,7 +123,9 @@ function draw() {
 
   updateMicChart(fy,h);
   
-  temperatureInput.elt.value = airTemperature.toFixed(3);
+  if(flagAirTemperature){
+    temperatureInput.elt.value = airTemperature.toFixed(3);
+  }
   parabolaWidthInput.elt.value = D.toFixed(3);
   parabolaHeightInput.elt.value = h.toFixed(3);
   
@@ -268,14 +275,11 @@ function createGUIElements(){
   let sliderWidth = 100;
   let sliderPosition = {
     x: parabolaGraph.position.x + parabolaGraph.width + 200, 
-    y: 350
+    y: 475
   };
   let dx = 70;
   let dy = 30;
   let inputSize = 40;
-
-
-  
 
   parabolaWidthSlider = createSlider(0.01,2,0.5,0.001);
   parabolaWidthSlider.position(sliderPosition.x + dx , sliderPosition.y + 0.25*dy);
@@ -297,15 +301,17 @@ function createGUIElements(){
   parabolaHeightInput.size(inputSize);
   parabolaHeightInput.input(setParabolaHeight);
 
-  temperatureSlider = createSlider(-10.0,50.0,20.0,0.5);
-  temperatureSlider.position(sliderPosition.x + dx , sliderPosition.y + 2.25*dy);
-  temperatureSlider.class("slider");
-  temperatureSlider.style('width',sliderWidth.toString()+'px');
-  
-  temperatureInput = createInput('');
-  temperatureInput.position(sliderPosition.x, sliderPosition.y + 2*dy);
-  temperatureInput.size(inputSize);
-  temperatureInput.input(setTemperature);
+  if(flagAirTemperature){
+    temperatureSlider = createSlider(-10.0,50.0,20.0,0.5);
+    temperatureSlider.position(sliderPosition.x + dx , sliderPosition.y + 2.25*dy);
+    temperatureSlider.class("slider");
+    temperatureSlider.style('width',sliderWidth.toString()+'px');
+    
+    temperatureInput = createInput('');
+    temperatureInput.position(sliderPosition.x, sliderPosition.y + 2*dy);
+    temperatureInput.size(inputSize);
+    temperatureInput.input(setTemperature);
+  }
 
   exportButton = createButton('EXPORT RESULTS');
   exportButton.style('font-family','Consolas');
@@ -318,27 +324,30 @@ function createGUIElements(){
 function drawGUILabels(){
   textAlign(LEFT);
   let labelPosition = {
-    x: parabolaGraph.position.x + parabolaGraph.width + 45,
-    // x: 275,
-    y: 325
+    x: parabolaGraph.position.x + parabolaGraph.width + 100,
+    y: 450
   };
-  let dx = 195;
+  let dx = 145;
   let dy = 30;
   textSize(12);
   stroke(0);
-  text('parabola length (D):', labelPosition.x, labelPosition.y + dy);
+  text('diameter (D):', labelPosition.x, labelPosition.y + dy);
   text('m', labelPosition.x + dx, labelPosition.y + dy);
-  text('parabola height (h):',labelPosition.x,labelPosition.y + 2*dy);
+  text('height (h):',labelPosition.x, labelPosition.y + 2*dy);
   text('m', labelPosition.x + dx, labelPosition.y + 2*dy);
-  text('air temperature:', labelPosition.x, labelPosition.y + 3*dy);
-  text('°C', labelPosition.x + dx, labelPosition.y + 3*dy);
-  text('microphone focus position (a): '+ (fy).toFixed(3) + 'm',labelPosition.x,labelPosition.y + 4*dy);
+  if(flagAirTemperature){
+    text('temperature:', labelPosition.x, labelPosition.y + 3*dy);
+    text('°C', labelPosition.x + dx, labelPosition.y + 3*dy);
+  }
+  text('microphone focus position (a): '+ (fy).toFixed(3) + 'm', labelPosition.x, labelPosition.y + 4*dy);
 
-  dx = 240;
+  dx = 80;
+  let ddy = 70;
   textAlign(RIGHT);
   textSize(10);
-  text('Developed by',labelPosition.x + dx,labelPosition.y + 7*dy);
-  text('Based on the analytical model described by',labelPosition.x + dx,labelPosition.y + 7*dy + 15);
+  text('Developed by',labelPosition.x + dx,labelPosition.y + 6.25*dy + ddy);
+  dx = 150;
+  text('Based on the analytical model described by',labelPosition.x + dx,labelPosition.y + 6.75*dy + ddy);
   
 }
 
@@ -346,18 +355,19 @@ function createReferenceLinks(){
   let linkHome, linkRef;
   let labelPosition = {
     x: parabolaGraph.position.x + parabolaGraph.width + 45,
-    y: 325
+    y: 425
   };
-  let dx = 252;
+  let dx = 150;
   let dy = 30;
+  let ddy = 70;
   
-  linkHome = createA('http://kauewerner.github.io/home','Kauê Werner','_blank');
-  linkHome.position(labelPosition.x + dx,labelPosition.y + 7*dy);
+  linkHome = createA('http://kauewerner.github.io/','Kauê Werner','_blank');
+  linkHome.position(labelPosition.x + 1*dx,labelPosition.y + 7*dy + ddy);
   linkHome.style('font-family', mainFont);
   linkHome.style('font-size', '10px');
   
   linkRef = createA('http://www.aes.org/e-lib/browse.cfm?elib=4443','Sten Wahlström','_blank');
-  linkRef.position(labelPosition.x + dx,labelPosition.y + 7*dy + 15);
+  linkRef.position(labelPosition.x + 1.45*dx,labelPosition.y + 7*dy + 15 + ddy);
   linkRef.style('font-family', mainFont);
   linkRef.style('font-size', '10px');
 }
@@ -435,7 +445,9 @@ function setParabolaWidth(){
 
 function setTemperature(){
   airTemperature = parseFloat(this.value());
-  temperatureSlider.value(airTemperature);
+  if(flagAirTemperature){
+    temperatureSlider.value(airTemperature);
+  }
 }
 
 function updateMicChart(ha,l){
